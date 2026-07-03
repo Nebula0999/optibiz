@@ -7,6 +7,8 @@ import { AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { DataTable } from '@/components/ui/Table';
 
+
+
 export function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: sales, isLoading: salesLoading } = useRecentSales();

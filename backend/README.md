@@ -71,6 +71,11 @@ backend/
 - PostgreSQL
 - Redis
 
+## Docker
+
+If you prefer to use Docker, you can run the backend in a containerized environment. Make sure you have Docker and Docker Compose installed.
+
+
 ### Setup
 
 ```bash

@@ -5,15 +5,15 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends curl \
+	&& rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY backend/requirements.txt /tmp/requirements.txt
 
-COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-RUN uv pip install --system --no-cache-dir -r requirements.txt
-
-COPY backend/ .
+COPY backend/ /app/
 
 EXPOSE 8000
 

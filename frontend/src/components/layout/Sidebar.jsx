@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
   ShoppingCart,
@@ -19,6 +19,8 @@ export function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const dispatch = useDispatch();
 
+  const location = useLocation();
+
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/app/dashboard' },
     { icon: ShoppingCart, label: 'Sales', path: '/app/sales' },
@@ -35,6 +37,7 @@ export function Sidebar() {
     dispatch(logout());
     window.location.href = '/home';
   };
+
 
   return (
     <>
@@ -64,7 +67,11 @@ export function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
-              className="flex items-center gap-3 px-6 py-3 hover:bg-gray-800 transition-colors text-gray-300 hover:text-white"
+              className={`flex items-center gap-3 px-6 py-3 transition-colors ${
+                location.pathname === item.path
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
             >
               <item.icon size={20} />
               <span>{item.label}</span>
