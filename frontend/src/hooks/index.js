@@ -67,6 +67,7 @@ export function useCreateProduct() {
     mutationFn: api.productsAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },
   });
 }
@@ -88,6 +89,7 @@ export function useDeleteProduct() {
     mutationFn: api.productsAPI.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },
   });
 }
@@ -123,6 +125,7 @@ export function useCreateSale() {
     mutationFn: api.salesAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -134,6 +137,7 @@ export function useUpdateSale() {
     mutationFn: ({ id, data }) => api.salesAPI.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -145,6 +149,7 @@ export function useDeleteSale() {
     mutationFn: (id) => api.salesAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -176,6 +181,17 @@ export function useInventory(params = {}) {
     queryKey: ['inventory', params],
     queryFn: () => api.inventoryAPI.list(params),
     enabled: !!localStorage.getItem('access_token'),
+  });
+}
+
+export function useCreateStockMovement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.inventoryAPI.createMovement,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 }
 
@@ -219,6 +235,23 @@ export function useLowStockAlerts() {
   return useQuery({
     queryKey: ['dashboard', 'lowStockAlerts'],
     queryFn: api.dashboardAPI.getLowStockAlerts,
+    enabled: !!localStorage.getItem('access_token'),
+  });
+}
+
+// Reports hooks
+export function useReportHistory(params = {}) {
+  return useQuery({
+    queryKey: ['reports', 'history', params],
+    queryFn: () => api.reportsAPI.getHistory(params),
+    enabled: !!localStorage.getItem('access_token'),
+  });
+}
+
+export function useReportSummary(params = {}) {
+  return useQuery({
+    queryKey: ['reports', 'summary', params],
+    queryFn: () => api.reportsAPI.getSummary(params),
     enabled: !!localStorage.getItem('access_token'),
   });
 }

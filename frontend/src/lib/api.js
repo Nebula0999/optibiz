@@ -63,6 +63,7 @@ export const inventoryAPI = {
   update: (id, data) => apiClient.put(`/inventory/${id}/`, data),
   getMovements: (productId) =>
     apiClient.get(`/stock-movements/`, { params: { product: productId } }),
+  createMovement: (data) => apiClient.post('/stock-movements/', data),
 };
 
 // Customers endpoints
@@ -80,6 +81,8 @@ export const reportsAPI = {
   getExpenses: (params) => apiClient.get('/reports/expenses/', { params }),
   getInventory: (params) => apiClient.get('/reports/inventory/', { params }),
   getProfitLoss: (params) => apiClient.get('/reports/profit-loss/', { params }),
+  getHistory: (params) => apiClient.get('/reports/history/', { params }),
+  getSummary: (params) => apiClient.get('/reports/summary/', { params }),
   generatePDF: (type, params) =>
     apiClient.get(`/reports/${type}/export/`, { params, responseType: 'blob' }),
 };

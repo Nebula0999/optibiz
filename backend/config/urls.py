@@ -13,7 +13,7 @@ from apps.products.views import CategoryViewSet, ProductViewSet
 from apps.sales.views import PaymentViewSet, SaleItemViewSet, SaleViewSet
 from apps.sacco.views import ContributionViewSet, LoanRepaymentViewSet, LoanViewSet, SACCOMemberViewSet
 from apps.users.views import RoleViewSet, UserViewSet, CustomTokenObtainPairView
-from apps.core.views import DashboardViewSet
+from apps.core.views import DashboardViewSet, ReportViewSet
 from apps.notifications.views import NotificationViewSet
 
 
@@ -37,6 +37,7 @@ router.register(r"sacco-contributions", ContributionViewSet, basename="sacco-con
 router.register(r"sacco-loans", LoanViewSet, basename="sacco-loan")
 router.register(r"sacco-repayments", LoanRepaymentViewSet, basename="sacco-repayment")
 router.register(r"dashboard", DashboardViewSet, basename="dashboard")
+router.register(r"reports", ReportViewSet, basename="report")
 router.register(r"notifications", NotificationViewSet, basename="notification")
 
 urlpatterns = [

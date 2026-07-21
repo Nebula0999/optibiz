@@ -4,8 +4,10 @@ from apps.sales.serializers import (
     PaymentSerializer, SaleItemSerializer, SaleSerializer,
     CreateSaleSerializer, UpdateSaleSerializer,
 )
+from apps.inventory.services import reverse_sale_inventory
 from rest_framework.response import Response
 from rest_framework import status
+from django.db import transaction
 
 
 class SaleViewSet(BusinessScopedModelViewSet):
@@ -45,6 +47,12 @@ class SaleViewSet(BusinessScopedModelViewSet):
             "customer", "branch", "created_by", "business"
         ).get(pk=sale.pk)
         return Response(SaleSerializer(sale).data)
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        reverse_sale_inventory(instance)
+        return super().destroy(request, *args, **kwargs)
 
 
 class SaleItemViewSet(BusinessScopedModelViewSet):

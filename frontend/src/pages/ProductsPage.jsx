@@ -71,28 +71,19 @@ export function ProductsPage() {
       reorder_level: parseInt(formData.reorder_level, 10) || 10,
     };
 
-    createProductMutation.mutate(
-      {
-        ...formData,
-        buying_price: parseFloat(formData.buying_price) || 0,
-        selling_price: parseFloat(formData.selling_price),
-        reorder_level: parseFloat(formData.reorder_level) || 10,
+    createProductMutation.mutate(payload, {
+      onSuccess: () => {
+        setFormData({
+          name: '',
+          sku: '',
+          category: '',
+          buying_price: '',
+          selling_price: '',
+          reorder_level: '',
+        });
+        setIsAddingProduct(false);
       },
-      payload,
-      {
-        onSuccess: () => {
-          setFormData({
-            name: '',
-            sku: '',
-            category: '',
-            buying_price: '',
-            selling_price: '',
-            reorder_level: '',
-          });
-          setIsAddingProduct(false);
-        },
-      }
-    );
+    });
   };
 
   const handleDelete = (id) => {

@@ -208,7 +208,7 @@ export function SalesPage() {
                   { value: 'cash', label: 'Cash' },
                   { value: 'mpesa', label: 'M-Pesa' },
                   { value: 'card', label: 'Card' },
-                  { value: 'credit', label: 'Credit' },
+                  { value: 'bank', label: 'Bank Transfer' },
                 ]}
                 value={formData.payment_method}
                 onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
@@ -258,7 +258,7 @@ export function SalesPage() {
                     { value: 'cash', label: 'Cash' },
                     { value: 'mpesa', label: 'M-Pesa' },
                     { value: 'card', label: 'Card' },
-                    { value: 'credit', label: 'Credit' },
+                    { value: 'bank', label: 'Bank Transfer' },
                   ]}
                   value={editForm.payment_method}
                   onChange={(e) => setEditForm({ ...editForm, payment_method: e.target.value })}

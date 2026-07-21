@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db import transaction
 
+from apps.inventory.services import get_sale_branch, record_stock_movement
 from apps.sales.models import Payment, Sale, SaleItem
 
 
@@ -63,13 +64,15 @@ class CreateSaleSerializer(serializers.Serializer):
     def create(self, validated_data):
         product = validated_data["product"]
         quantity = validated_data["quantity"]
+        business = self.context["business"]
+        branch = get_sale_branch(business)
         unit_price = product.selling_price
         subtotal = unit_price * quantity
-        business = self.context["business"]
         user = self.context["user"]
 
         sale = Sale.objects.create(
             business=business,
+            branch=branch,
             customer=validated_data.get("customer"),
             payment_method=validated_data["payment_method"],
             total_amount=subtotal,
@@ -82,6 +85,15 @@ class CreateSaleSerializer(serializers.Serializer):
             quantity=quantity,
             unit_price=unit_price,
             subtotal=subtotal,
+        )
+        record_stock_movement(
+            business=business,
+            product=product,
+            movement_type="out",
+            quantity=quantity,
+            created_by=user,
+            notes=f"Sale #{sale.pk}",
+            source_branch=branch,
         )
         return sale
 
@@ -102,6 +114,7 @@ class UpdateSaleSerializer(serializers.Serializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        branch = instance.branch or get_sale_branch(self.context["business"])
         if "payment_method" in validated_data:
             instance.payment_method = validated_data["payment_method"]
         if "customer" in validated_data:
@@ -111,10 +124,23 @@ class UpdateSaleSerializer(serializers.Serializer):
         if new_quantity is not None:
             item = instance.items.first()
             if item:
+                original_quantity = item.quantity
                 item.quantity = new_quantity
                 item.subtotal = item.unit_price * new_quantity
                 item.save(update_fields=["quantity", "subtotal"])
                 instance.total_amount = item.subtotal
+                inventory_delta = original_quantity - new_quantity
+                if inventory_delta:
+                    record_stock_movement(
+                        business=instance.business,
+                        product=item.product,
+                        movement_type="in" if inventory_delta > 0 else "out",
+                        quantity=abs(inventory_delta),
+                        created_by=instance.created_by,
+                        notes=f"Sale #{instance.pk} adjustment",
+                        source_branch=branch,
+                        destination_branch=branch,
+                    )
 
         instance.save()
         return instance

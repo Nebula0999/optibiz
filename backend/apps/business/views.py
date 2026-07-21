@@ -3,6 +3,7 @@ from rest_framework import permissions, viewsets
 from apps.business.models import Branch, Business, Settings
 from apps.business.serializers import BranchSerializer, BusinessSerializer, SettingsSerializer
 from apps.core.views import BusinessScopedModelViewSet
+from apps.inventory.services import ensure_business_inventory
 
 
 class BusinessViewSet(viewsets.ModelViewSet):
@@ -27,6 +28,10 @@ class BusinessViewSet(viewsets.ModelViewSet):
 class BranchViewSet(BusinessScopedModelViewSet):
     queryset = Branch.objects.select_related("business").all()
     serializer_class = BranchSerializer
+
+    def perform_create(self, serializer):
+        branch = serializer.save(business=self._get_user_business())
+        ensure_business_inventory(branch.business)
 
 class SettingsViewSet(BusinessScopedModelViewSet):
     queryset = Settings.objects.select_related("business_name").all()
