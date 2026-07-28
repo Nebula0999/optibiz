@@ -1,6 +1,8 @@
 from io import BytesIO
+from datetime import date
 
 from django.db.models import Count, F, Sum
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.utils.dateparse import parse_date
 from reportlab.lib import colors
@@ -52,6 +54,118 @@ class DashboardViewSet(viewsets.ViewSet):
     """Dashboard statistics and analytics endpoints."""
     permission_classes = [IsAuthenticated]
 
+    def _get_business(self, request):
+        return getattr(request.user, 'business', None)
+
+    def _month_start(self, year, month):
+        return date(year, month, 1)
+
+    def _add_months(self, month_start, months):
+        total_months = month_start.year * 12 + (month_start.month - 1) + months
+        year = total_months // 12
+        month = total_months % 12 + 1
+        return self._month_start(year, month)
+
+    def _format_month_label(self, month_start):
+        return month_start.strftime('%b %Y')
+
+    def _build_profit_loss_trend(self, business, months=6):
+        from apps.expenses.models import Expense
+        from apps.sales.models import Sale
+
+        today = timezone.localdate()
+        current_month_start = self._month_start(today.year, today.month)
+        first_month_start = self._add_months(current_month_start, -(months - 1))
+        next_month_start = self._add_months(current_month_start, 1)
+
+        sales_rows = Sale.objects.filter(
+            business=business,
+            sale_date__date__gte=first_month_start,
+            sale_date__date__lt=next_month_start,
+        ).annotate(month=TruncMonth('sale_date')).values('month').annotate(total=Sum('total_amount'))
+
+        expense_rows = Expense.objects.filter(
+            business=business,
+            expense_date__gte=first_month_start,
+            expense_date__lt=next_month_start,
+        ).annotate(month=TruncMonth('expense_date')).values('month').annotate(total=Sum('amount'))
+
+        sales_map = {row['month'].date(): float(row['total'] or 0) for row in sales_rows if row['month']}
+        expense_map = {row['month'].date(): float(row['total'] or 0) for row in expense_rows if row['month']}
+
+        trend = []
+        for offset in range(months):
+            month_start = self._add_months(first_month_start, offset)
+            revenue = sales_map.get(month_start, 0)
+            expenses = expense_map.get(month_start, 0)
+            trend.append({
+                'label': self._format_month_label(month_start),
+                'revenue': revenue,
+                'expenses': expenses,
+                'profit': revenue - expenses,
+            })
+
+        return trend
+
+    def _build_stock_analytics(self, business, limit=6):
+        from decimal import Decimal
+
+        from apps.inventory.models import Inventory
+
+        stock_items = Inventory.objects.filter(business=business).select_related('product', 'branch').order_by('quantity_available', 'product__name')
+
+        healthy_items = 0
+        low_stock_items = 0
+        out_of_stock_items = 0
+        total_units = Decimal('0')
+        total_value = Decimal('0')
+        items = []
+
+        for record in stock_items:
+            current_stock = record.quantity_available
+            reorder_level = record.reorder_level
+            stock_value = current_stock * record.product.selling_price
+
+            if current_stock <= 0:
+                out_of_stock_items += 1
+                status = 'out_of_stock'
+            elif current_stock <= reorder_level:
+                low_stock_items += 1
+                status = 'low_stock'
+            else:
+                healthy_items += 1
+                status = 'healthy'
+
+            total_units += current_stock
+            total_value += stock_value
+
+            items.append({
+                'id': str(record.id),
+                'product_name': record.product.name,
+                'branch_name': record.branch.name,
+                'current_stock': float(current_stock),
+                'reorder_level': float(reorder_level),
+                'stock_value': float(stock_value),
+                'status': status,
+            })
+
+        return {
+            'summary': {
+                'total_items': len(items),
+                'healthy_items': healthy_items,
+                'low_stock_items': low_stock_items,
+                'out_of_stock_items': out_of_stock_items,
+                'total_units': float(total_units),
+                'total_value': float(total_value),
+            },
+            'stock_health': [
+                {'name': 'Healthy', 'value': healthy_items, 'color': '#16a34a'},
+                {'name': 'Low stock', 'value': low_stock_items, 'color': '#f59e0b'},
+                {'name': 'Out of stock', 'value': out_of_stock_items, 'color': '#ef4444'},
+            ],
+            'stock_levels': items[:limit],
+        }
+
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get dashboard statistics for the user's business."""
@@ -98,6 +212,33 @@ class DashboardViewSet(viewsets.ViewSet):
             'profit': float(profit),
             'low_stock_items': low_stock_items,
             'active_customers': active_customers,
+        })
+
+    @action(detail=False, methods=['get'], url_path='analytics')
+    def analytics(self, request):
+        business = self._get_business(request)
+        if not business:
+            return Response({
+                'profit_loss_trend': [],
+                'stock_health': [],
+                'stock_levels': [],
+                'stock_summary': {
+                    'total_items': 0,
+                    'healthy_items': 0,
+                    'low_stock_items': 0,
+                    'out_of_stock_items': 0,
+                    'total_units': 0,
+                    'total_value': 0,
+                },
+            })
+
+        stock_analytics = self._build_stock_analytics(business)
+
+        return Response({
+            'profit_loss_trend': self._build_profit_loss_trend(business),
+            'stock_health': stock_analytics['stock_health'],
+            'stock_levels': stock_analytics['stock_levels'],
+            'stock_summary': stock_analytics['summary'],
         })
 
     @action(detail=False, methods=['get'], url_path='recent-sales')

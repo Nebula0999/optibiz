@@ -113,7 +113,7 @@ export const dashboardAPI = {
   getRecentSales: (limit = 10) =>
     apiClient.get('/dashboard/recent-sales/', { params: { limit } }),
   getLowStockAlerts: () => apiClient.get('/dashboard/low-stock-alerts/'),
-  getSalesChart: (params) => apiClient.get('/dashboard/sales-chart/', { params }),
+  getAnalytics: (params) => apiClient.get('/dashboard/analytics/', { params }),
 };
 
 // Notifications endpoints

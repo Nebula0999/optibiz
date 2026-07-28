@@ -1,10 +1,10 @@
 """Django settings for the OptiBiz backend."""
 
+from datetime import timedelta
 from pathlib import Path
 import os
 
 import dj_database_url
-import django
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,6 +12,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-secret-key-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -74,14 +77,17 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("POSTGRES_DB", "optibiz"),
-            "USER": os.environ.get("POSTGRES_USER", "postgres"),
-            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "Nebula@2020"),
-            "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-        }
+    "default": dj_database_url.config(
+        default=DATABASE_URL
+        or "postgresql://{user}:{password}@{host}:{port}/{name}".format(
+            user=os.environ.get("POSTGRES_USER", "postgres"),
+            password=os.environ.get("POSTGRES_PASSWORD", "Nebula@2020"),
+            host=os.environ.get("POSTGRES_HOST", "localhost"),
+            port=os.environ.get("POSTGRES_PORT", "5432"),
+            name=os.environ.get("POSTGRES_DB", "optibiz"),
+        ),
+        conn_max_age=int(os.environ.get("POSTGRES_CONN_MAX_AGE", "600")),
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -163,9 +169,6 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
-# SimpleJWT configuration
-from datetime import timedelta
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
@@ -174,15 +177,22 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+CHANNEL_LAYER_BACKEND = os.environ.get(
+    "DJANGO_CHANNEL_LAYER_BACKEND",
+    "channels.layers.InMemoryChannelLayer",
+)
+
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": os.environ.get(
-            "DJANGO_CHANNEL_LAYER_BACKEND",
-            "channels.layers.InMemoryChannelLayer",
-        ),
+        "BACKEND": CHANNEL_LAYER_BACKEND,
     }
 }
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+if CHANNEL_LAYER_BACKEND == "channels_redis.core.RedisChannelLayer":
+    CHANNEL_LAYERS["default"]["CONFIG"] = {
+        "hosts": [REDIS_URL],
+    }
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "django-db")
 CELERY_TASK_ALWAYS_EAGER = os.environ.get("CELERY_TASK_ALWAYS_EAGER", "False").lower() == "true"

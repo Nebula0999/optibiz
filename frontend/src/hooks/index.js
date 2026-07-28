@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '../lib/api';
 
@@ -235,6 +234,14 @@ export function useLowStockAlerts() {
   return useQuery({
     queryKey: ['dashboard', 'lowStockAlerts'],
     queryFn: api.dashboardAPI.getLowStockAlerts,
+    enabled: !!localStorage.getItem('access_token'),
+  });
+}
+
+export function useDashboardAnalytics(params = {}) {
+  return useQuery({
+    queryKey: ['dashboard', 'analytics', params],
+    queryFn: () => api.dashboardAPI.getAnalytics(params),
     enabled: !!localStorage.getItem('access_token'),
   });
 }

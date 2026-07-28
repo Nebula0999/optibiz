@@ -1,4 +1,9 @@
-import { useDashboardStats, useRecentSales, useLowStockAlerts } from '@/hooks';
+import {
+  useDashboardStats,
+  useRecentSales,
+  useLowStockAlerts,
+  useDashboardAnalytics,
+} from '@/hooks';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/Loading';
@@ -6,6 +11,21 @@ import { Badge } from '@/components/ui/Badge';
 import { AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { DataTable } from '@/components/ui/Table';
+import {
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Bar,
+  BarChart,
+} from 'recharts';
 
 
 
@@ -13,8 +33,9 @@ export function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: sales, isLoading: salesLoading } = useRecentSales();
   const { data: alerts } = useLowStockAlerts();
+  const { data: analytics, isLoading: analyticsLoading } = useDashboardAnalytics();
 
-  if (statsLoading) {
+  if (statsLoading || analyticsLoading) {
     return (
       <MainLayout>
         <LoadingSpinner size="lg" />
@@ -30,8 +51,32 @@ export function DashboardPage() {
     active_customers: 0,
   };
 
+  const dashboardAnalytics = analytics?.data || {
+    profit_loss_trend: [],
+    stock_health: [],
+    stock_levels: [],
+    stock_summary: {
+      total_items: 0,
+      healthy_items: 0,
+      low_stock_items: 0,
+      out_of_stock_items: 0,
+      total_units: 0,
+      total_value: 0,
+    },
+  };
+
   const recentSales = sales?.data?.results || [];
   const lowStockAlerts = alerts?.data?.results || [];
+  const profitLossTrend = dashboardAnalytics.profit_loss_trend || [];
+  const stockHealth = dashboardAnalytics.stock_health || [];
+  const stockLevels = dashboardAnalytics.stock_levels || [];
+  const stockSummary = dashboardAnalytics.stock_summary || {};
+
+  const stockHealthColors = {
+    Healthy: '#16a34a',
+    'Low stock': '#f59e0b',
+    'Out of stock': '#ef4444',
+  };
 
   const columns = [
     { key: 'id', label: 'ID' },
@@ -62,12 +107,14 @@ export function DashboardPage() {
     </Card>
   );
 
+  const chartTooltipFormatter = (value) => formatCurrency(Number(value || 0));
+
   return (
     <MainLayout>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-600">
-          Welcome back! Here's your business overview.
+          Welcome back! Here&apos;s your business overview.
         </p>
       </div>
 
@@ -101,6 +148,111 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Profit and Loss Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {profitLossTrend.length > 0 ? (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={profitLossTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                    <YAxis tickFormatter={(value) => `KES ${Number(value).toLocaleString()}`} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                    <Tooltip formatter={chartTooltipFormatter} />
+                    <Legend />
+                    <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={3} dot={false} name="Revenue" />
+                    <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={3} dot={false} name="Expenses" />
+                    <Line type="monotone" dataKey="profit" stroke="#2563eb" strokeWidth={3} dot={false} name="Profit" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-10">
+                Add sales and expenses to see profit and loss trends.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Stock Health</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stockHealth.length > 0 ? (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stockHealth}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={55}
+                      outerRadius={90}
+                      paddingAngle={4}
+                    >
+                      {stockHealth.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color || stockHealthColors[entry.name] || '#94a3b8'} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value} items`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+                  <div className="rounded-lg bg-green-50 p-3">
+                    <p className="text-xs text-green-700">Healthy</p>
+                    <p className="text-lg font-semibold text-green-900">{stockSummary.healthy_items || 0}</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 p-3">
+                    <p className="text-xs text-amber-700">Low</p>
+                    <p className="text-lg font-semibold text-amber-900">{stockSummary.low_stock_items || 0}</p>
+                  </div>
+                  <div className="rounded-lg bg-red-50 p-3">
+                    <p className="text-xs text-red-700">Out</p>
+                    <p className="text-lg font-semibold text-red-900">{stockSummary.out_of_stock_items || 0}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-10">
+                Stock health will appear once inventory is recorded.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Stock Levels vs Reorder Level</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stockLevels.length > 0 ? (
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stockLevels}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="product_name" tick={{ fill: '#6b7280', fontSize: 12 }} interval={0} angle={-15} textAnchor="end" height={70} />
+                  <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
+                  <Tooltip formatter={(value) => Number(value).toFixed(2)} />
+                  <Legend />
+                  <Bar dataKey="current_stock" name="Current stock" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="reorder_level" name="Reorder level" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-10">
+              Record inventory items to compare stock levels against reorder thresholds.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Alerts and Recent Sales */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
