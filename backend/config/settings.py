@@ -5,15 +5,27 @@ from pathlib import Path
 import os
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-secret-key-change-me")
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() == "true"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "dev-only-secret-key-change-me"
+    else:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false")
+
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
+render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if render_hostname and render_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_hostname)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL and not DEBUG:
+    raise ImproperlyConfigured("DATABASE_URL must be set when DJANGO_DEBUG is false")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 INSTALLED_APPS = [
@@ -140,14 +152,14 @@ AUTHENTICATION_BACKENDS = [
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    host.strip() 
-    for host in os.environ.get(
+    origin.strip()
+    for origin in os.environ.get(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://localhost:3000,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+        "http://localhost:5173,http://localhost:3000,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:3000",
     ).split(",")
-    if host.strip()
+    if origin.strip()
 ]
-
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(CORS_ALLOWED_ORIGINS))
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     "DELETE",
@@ -196,3 +208,17 @@ if CHANNEL_LAYER_BACKEND == "channels_redis.core.RedisChannelLayer":
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "django-db")
 CELERY_TASK_ALWAYS_EAGER = os.environ.get("CELERY_TASK_ALWAYS_EAGER", "False").lower() == "true"
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    CSRF_TRUSTED_ORIGINS = [
+        origin.strip()
+        for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]

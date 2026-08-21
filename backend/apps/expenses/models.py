@@ -14,6 +14,10 @@ class Expense(TimestampedModel):
     class Meta:
         db_table = "expenses_expense"
         ordering = ["-expense_date"]
+        indexes = [
+            models.Index(fields=["business", "expense_date"]),
+            models.Index(fields=["business", "category"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.category}: {self.amount}"

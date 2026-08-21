@@ -40,9 +40,9 @@ export function SaccoPage() {
   const recordContributionMutation = useRecordContribution();
   const createLoanMutation = useCreateSaccoLoan();
 
-  const members = membersData?.results || [];
-  const contributions = contributionsData?.results || [];
-  const loans = loansData?.results || [];
+  const members = membersData?.data?.results || membersData?.data || [];
+  const contributions = contributionsData?.data?.results || contributionsData?.data || [];
+  const loans = loansData?.data?.results || loansData?.data || [];
   const stats = statsData?.data || { total_savings: 0, active_loans: 0, members_count: 0 };
 
   const handleAddMember = async (e) => {

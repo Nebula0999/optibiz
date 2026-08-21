@@ -89,22 +89,22 @@ export const reportsAPI = {
 
 // SACCO endpoints
 export const saccoAPI = {
-  getMembers: (params) => apiClient.get('/sacco/members/', { params }),
-  createMember: (data) => apiClient.post('/sacco/members/', data),
-  getMember: (id) => apiClient.get(`/sacco/members/${id}/`),
-  updateMember: (id, data) => apiClient.put(`/sacco/members/${id}/`, data),
-  deleteMember: (id) => apiClient.delete(`/sacco/members/${id}/`),
+  getMembers: (params) => apiClient.get('/sacco-members/', { params }),
+  createMember: (data) => apiClient.post('/sacco-members/', data),
+  getMember: (id) => apiClient.get(`/sacco-members/${id}/`),
+  updateMember: (id, data) => apiClient.put(`/sacco-members/${id}/`, data),
+  deleteMember: (id) => apiClient.delete(`/sacco-members/${id}/`),
   getContributions: (params) =>
-    apiClient.get('/sacco/contributions/', { params }),
-  recordContribution: (data) => apiClient.post('/sacco/contributions/', data),
+    apiClient.get('/sacco-contributions/', { params }),
+  recordContribution: (data) => apiClient.post('/sacco-contributions/', data),
   
-  getLoans: (params) => apiClient.get('/sacco/loans/', { params }),
-  createLoan: (data) => apiClient.post('/sacco/loans/', data),
-  getLoan: (id) => apiClient.get(`/sacco/loans/${id}/`),
+  getLoans: (params) => apiClient.get('/sacco-loans/', { params }),
+  createLoan: (data) => apiClient.post('/sacco-loans/', data),
+  getLoan: (id) => apiClient.get(`/sacco-loans/${id}/`),
   recordRepayment: (loanId, data) =>
-    apiClient.post(`/sacco/loans/${loanId}/repayments/`, data),
+    apiClient.post(`/sacco-repayments/`, { ...data, loan: loanId }),
   
-  getStats: () => apiClient.get('/sacco/stats/'),
+  getStats: () => apiClient.get('/sacco-stats/'),
 };
 
 // Dashboard endpoints

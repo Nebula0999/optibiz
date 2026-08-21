@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: optibiz-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health/
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: optibiz-db
+          property: connectionString
+      - key: DJANGO_ALLOWED_HOSTS
+        value: optibiz-api.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://optibiz-frontend.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://optibiz-frontend.onrender.com
+      - key: POSTGRES_CONN_MAX_AGE
+        value: "60"
+
+  - type: static
+    name: optibiz-frontend
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://optibiz-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: optibiz-db
+    plan: free
